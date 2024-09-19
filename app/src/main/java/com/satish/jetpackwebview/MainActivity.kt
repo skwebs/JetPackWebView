@@ -75,7 +75,7 @@ class MainActivity : ComponentActivity() {
                 settings.domStorageEnabled = true
                 val ua = System.getProperty("http.agent")
                 val appVersion = context.packageName
-                settings.userAgentString = "$ua /|$appVersion"
+                settings.userAgentString = "$ua $appVersion Android-WebView"
 
 
                 webViewClient = object : WebViewClient() {
@@ -99,7 +99,7 @@ class MainActivity : ComponentActivity() {
                         super.onReceivedError(view, request, error)
                         loaderDialogScreen.value = false
                         // Load local HTML file in case of error
-                        view?.loadUrl("file:///android_asset/404.html")
+                        view?.loadUrl("file:///android_asset/dist/index.html")
                     }
                 }
                 loadUrl(url)
