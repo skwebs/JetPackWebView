@@ -11,6 +11,7 @@ import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -51,9 +52,8 @@ class MainActivity : ComponentActivity() {
 
         val url by remember { mutableStateOf("https://amh.anshumemorial.in") }
         var webView by remember { mutableStateOf<WebView?>(null) }
-        var canGoBack by remember { mutableStateOf(false) }
+//        var canGoBack by remember { mutableStateOf(false) }
         val loaderDialogScreen = remember { mutableStateOf(false) }
-//        val jsResult by remember { mutableStateOf<JsResult?>(null) }
 
         var showDialog by remember { mutableStateOf(false) }
         var confirmMessage by remember { mutableStateOf("") }
@@ -64,8 +64,7 @@ class MainActivity : ComponentActivity() {
 
 
         if (showDialog) {
-            AlertDialog(
-                onDismissRequest = { showDialog = false },
+            AlertDialog(onDismissRequest = { showDialog = false },
                 title = { Text("Confirm") },
                 text = { Text(confirmMessage) },
                 confirmButton = {
@@ -85,15 +84,13 @@ class MainActivity : ComponentActivity() {
                     }) {
                         Text("Cancel")
                     }
-                }
-            )
+                })
         }
 
 
         // Show the exit confirmation dialog
         if (showExitDialog) {
-            AlertDialog(
-                onDismissRequest = { showExitDialog = false },
+            AlertDialog(onDismissRequest = { showExitDialog = false },
                 title = { Text("Exit") },
                 text = { Text("Are you sure you want to exit?") },
                 confirmButton = {
@@ -111,8 +108,7 @@ class MainActivity : ComponentActivity() {
                     }) {
                         Text("No")
                     }
-                }
-            )
+                })
         }
 
 
@@ -140,23 +136,8 @@ class MainActivity : ComponentActivity() {
                 settings.userAgentString = "$ua $appVersion Android-WebView"
 
                 webChromeClient = object : WebChromeClient() {
-//                    override fun onJsAlert(
-//                        view: WebView?,
-//                        url: String?,
-//                        message: String?,
-//                        result: JsResult?
-//                    ): Boolean {
-//                        confirmMessage = message ?: ""
-//                        showDialog = true
-//                        result?.confirm() // You can handle confirm/cancel logic here
-//                        return true // Return true to indicate that we've handled the confirm dialog
-//                    }
-
                     override fun onJsConfirm(
-                        view: WebView?,
-                        url: String?,
-                        message: String?,
-                        result: JsResult?
+                        view: WebView?, url: String?, message: String?, result: JsResult?
                     ): Boolean {
                         confirmMessage = message ?: ""
                         jsResult = result // Store JsResult to handle confirm/cancel
@@ -168,25 +149,23 @@ class MainActivity : ComponentActivity() {
                 webViewClient = object : WebViewClient() {
 
                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                        canGoBack = view?.canGoBack() ?: false
+//                        canGoBack = view?.canGoBack() ?: false
                         loaderDialogScreen.value = true
 //                        return super.onPageStarted(view, url, favicon)
                     }
 
                     override fun onPageFinished(view: WebView, url: String) {
-                        canGoBack = view.canGoBack()
+//                        canGoBack = view.canGoBack()
                         loaderDialogScreen.value = false
                     }
 
                     override fun onReceivedError(
-                        view: WebView?,
-                        request: WebResourceRequest?,
-                        error: WebResourceError?
+                        view: WebView?, request: WebResourceRequest?, error: WebResourceError?
                     ) {
                         super.onReceivedError(view, request, error)
                         loaderDialogScreen.value = false
                         // Load local HTML file in case of error
-                        view?.loadUrl("file:///android_asset/dist/index.html")
+                        view?.loadUrl("file:///android_asset/404.html")
                     }
                 }
                 loadUrl(url)
@@ -197,13 +176,15 @@ class MainActivity : ComponentActivity() {
             it.loadUrl(url)
         })
 
-        // BackHandler logic for handling back button
+
         BackHandler(enabled = true) {
-            if (canGoBack) {
-                webView?.goBack() // Navigate back within the WebView
-            } else {
-                // Show exit confirmation dialog
-                showExitDialog = true
+            webView?.let {
+                if (it.canGoBack()) {
+                    it.goBack() // Navigate back within the WebView
+                } else {
+                    // Show exit confirmation dialog
+                    showExitDialog = true
+                }
             }
         }
 
