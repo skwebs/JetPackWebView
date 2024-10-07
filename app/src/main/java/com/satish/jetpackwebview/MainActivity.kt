@@ -1,32 +1,31 @@
 package com.satish.jetpackwebview
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.graphics.Bitmap
 import android.os.Bundle
-import android.util.Log
 import android.view.ViewGroup
+import android.webkit.JsResult
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.SimpleAdapter
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
@@ -45,6 +44,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
     @SuppressLint("SetJavaScriptEnabled")
     @Composable
     private fun WebViewScreen() {
@@ -53,6 +53,68 @@ class MainActivity : ComponentActivity() {
         var webView by remember { mutableStateOf<WebView?>(null) }
         var canGoBack by remember { mutableStateOf(false) }
         val loaderDialogScreen = remember { mutableStateOf(false) }
+//        val jsResult by remember { mutableStateOf<JsResult?>(null) }
+
+        var showDialog by remember { mutableStateOf(false) }
+        var confirmMessage by remember { mutableStateOf("") }
+        var jsResult by remember { mutableStateOf<JsResult?>(null) } // To hold JsResult reference for confirm/cancel
+
+        // For exit confirmation dialog
+        var showExitDialog by remember { mutableStateOf(false) }
+
+
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                title = { Text("Confirm") },
+                text = { Text(confirmMessage) },
+                confirmButton = {
+                    Button(onClick = {
+                        // Handle "OK" pressed
+                        jsResult?.confirm() // Confirm the JavaScript dialog
+                        showDialog = false
+                    }) {
+                        Text("OK")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = {
+                        // Handle "Cancel" pressed
+                        jsResult?.cancel() // Cancel the JavaScript dialog
+                        showDialog = false
+                    }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+
+        // Show the exit confirmation dialog
+        if (showExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showExitDialog = false },
+                title = { Text("Exit") },
+                text = { Text("Are you sure you want to exit?") },
+                confirmButton = {
+                    Button(onClick = {
+                        showExitDialog = false
+                        // Exit the app or finish activity
+                        (webView?.context as? Activity)?.finish() // Exit app
+                    }) {
+                        Text("Yes")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = {
+                        showExitDialog = false // Just dismiss the dialog
+                    }) {
+                        Text("No")
+                    }
+                }
+            )
+        }
+
 
         if (loaderDialogScreen.value) {
             Dialog(
@@ -77,7 +139,32 @@ class MainActivity : ComponentActivity() {
                 val appVersion = context.packageName
                 settings.userAgentString = "$ua $appVersion Android-WebView"
 
+                webChromeClient = object : WebChromeClient() {
+//                    override fun onJsAlert(
+//                        view: WebView?,
+//                        url: String?,
+//                        message: String?,
+//                        result: JsResult?
+//                    ): Boolean {
+//                        confirmMessage = message ?: ""
+//                        showDialog = true
+//                        result?.confirm() // You can handle confirm/cancel logic here
+//                        return true // Return true to indicate that we've handled the confirm dialog
+//                    }
 
+                    override fun onJsConfirm(
+                        view: WebView?,
+                        url: String?,
+                        message: String?,
+                        result: JsResult?
+                    ): Boolean {
+                        confirmMessage = message ?: ""
+                        jsResult = result // Store JsResult to handle confirm/cancel
+                        showDialog = true
+                        return true // Return true to indicate that we've handled the confirm dialog
+
+                    }
+                }
                 webViewClient = object : WebViewClient() {
 
                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -110,31 +197,15 @@ class MainActivity : ComponentActivity() {
             it.loadUrl(url)
         })
 
-
+        // BackHandler logic for handling back button
         BackHandler(enabled = true) {
-            Log.d("TAG", "canGoBack: $canGoBack")
             if (canGoBack) {
-                webView?.goBack()
+                webView?.goBack() // Navigate back within the WebView
             } else {
-                // Show a confirmation dialog to exit
-                Toast.makeText(this, "Are you sure you want to exit?", Toast.LENGTH_SHORT).show()
-                finish()
-                //                AlertDialog(
-//                    onDismissRequest = {},
-//                    title = { Text(text = "Exit?") },
-//                    text = { Text("Are you sure you want to exit?") },
-//                    confirmButton = {
-//                        Button(onClick = { finish() }) {
-//                            Text("Yes")
-//                        }
-//                    },
-//                    dismissButton = {
-//                        Button(onClick = {}) {
-//                            Text("No")
-//                        }
-//                    }
-//                )
+                // Show exit confirmation dialog
+                showExitDialog = true
             }
         }
+
     }
 }
