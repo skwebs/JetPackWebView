@@ -9,14 +9,17 @@ import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,7 +40,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        enableEdgeToEdge()
+        enableEdgeToEdge()
         setContent {
             JetPackWebViewTheme {
                 WebViewScreen()
@@ -52,7 +55,6 @@ class MainActivity : ComponentActivity() {
 
         val url by remember { mutableStateOf("https://amh.anshumemorial.in") }
         var webView by remember { mutableStateOf<WebView?>(null) }
-//        var canGoBack by remember { mutableStateOf(false) }
         val loaderDialogScreen = remember { mutableStateOf(false) }
 
         var showDialog by remember { mutableStateOf(false) }
@@ -61,7 +63,6 @@ class MainActivity : ComponentActivity() {
 
         // For exit confirmation dialog
         var showExitDialog by remember { mutableStateOf(false) }
-
 
         if (showDialog) {
             AlertDialog(onDismissRequest = { showDialog = false },
@@ -121,60 +122,115 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        AndroidView(modifier = Modifier.fillMaxSize(), factory = {
 
-            WebView(it).apply {
+        // Wrap WebView in Box to apply insets (status bar, navigation bar)
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .systemBarsPadding() // Ensures content does not overlap status/navigation bar
+        ) {
+            AndroidView(modifier = Modifier.fillMaxSize(), factory = {
 
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
-                )
+                WebView(it).apply {
 
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                val ua = System.getProperty("http.agent")
-                val appVersion = context.packageName
-                settings.userAgentString = "$ua $appVersion Android-WebView"
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT
+                    )
 
-                webChromeClient = object : WebChromeClient() {
-                    override fun onJsConfirm(
-                        view: WebView?, url: String?, message: String?, result: JsResult?
-                    ): Boolean {
-                        confirmMessage = message ?: ""
-                        jsResult = result // Store JsResult to handle confirm/cancel
-                        showDialog = true
-                        return true // Return true to indicate that we've handled the confirm dialog
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+
+                    settings.allowContentAccess = true
+                    settings.allowFileAccess = true
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.cacheMode = WebSettings.LOAD_DEFAULT
+
+                    settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+
+                    webView?.clearHistory()
+
+
+                    val ua = System.getProperty("http.agent")
+                    val appVersion = context.packageName
+                    settings.userAgentString = "$ua $appVersion Android-WebView"
+
+                    webChromeClient = object : WebChromeClient() {
+
+
+                        override fun onJsConfirm(
+                            view: WebView?, url: String?, message: String?, result: JsResult?
+                        ): Boolean {
+                            confirmMessage = message ?: ""
+                            jsResult = result // Store JsResult to handle confirm/cancel
+                            showDialog = true
+                            return true // Return true to indicate that we've handled the confirm dialog
+                        }
+
+                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                            // Update progress bar with loading progress
+                            if (newProgress == 100) {
+                                loaderDialogScreen.value = false // Hide loader when done
+                            } else {
+                                loaderDialogScreen.value = true // Show loader while loading
+                            }
+                        }
 
                     }
-                }
-                webViewClient = object : WebViewClient() {
+                    webViewClient = object : WebViewClient() {
 
-                    override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-//                        canGoBack = view?.canGoBack() ?: false
-                        loaderDialogScreen.value = true
+                        //                    except url block loading other url
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView?,
+                            request: WebResourceRequest?
+                        ): Boolean {
+                            val webUrl = request?.url.toString()
+                            if (webUrl.startsWith(url)) {
+                                return false // Allow URL
+                            }
+                            return true // Block other URLs
+                        }
+
+
+                        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                            loaderDialogScreen.value = true
 //                        return super.onPageStarted(view, url, favicon)
-                    }
+                        }
 
-                    override fun onPageFinished(view: WebView, url: String) {
-//                        canGoBack = view.canGoBack()
-                        loaderDialogScreen.value = false
-                    }
+                        override fun onPageFinished(view: WebView, url: String) {
+                            loaderDialogScreen.value = false
+                        }
 
-                    override fun onReceivedError(
-                        view: WebView?, request: WebResourceRequest?, error: WebResourceError?
-                    ) {
-                        super.onReceivedError(view, request, error)
-                        loaderDialogScreen.value = false
-                        // Load local HTML file in case of error
-                        view?.loadUrl("file:///android_asset/404.html")
+                        override fun onReceivedError(
+                            view: WebView?,
+                            request: WebResourceRequest?,
+                            error: WebResourceError?
+                        ) {
+                            super.onReceivedError(view, request, error)
+                            loaderDialogScreen.value = false
+                            // Display a custom error page instead
+                            view?.loadUrl("file:///android_asset/error.html")
+                        }
+
+
+//                    override fun onReceivedError(
+//                        view: WebView?, request: WebResourceRequest?, error: WebResourceError?
+//                    ) {
+//                        super.onReceivedError(view, request, error)
+//                        loaderDialogScreen.value = false
+//                        // Load local HTML file in case of error
+//                        view?.loadUrl("file:///android_asset/404.html")
+//                    }
                     }
+                    loadUrl(url)
+                    webView = this
+
                 }
-                loadUrl(url)
-                webView = this
+            }, update = {
+                it.loadUrl(url)
+            })
 
-            }
-        }, update = {
-            it.loadUrl(url)
-        })
+        }
 
 
         BackHandler(enabled = true) {
