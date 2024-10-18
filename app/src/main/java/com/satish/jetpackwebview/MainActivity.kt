@@ -2,12 +2,17 @@ package com.satish.jetpackwebview
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.graphics.Bitmap
 import android.os.Build
 import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.JsResult
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -79,8 +84,8 @@ class MainActivity : ComponentActivity() {
         val loaderDialogScreen = remember { mutableStateOf(false) }
 
         var showDialog by remember { mutableStateOf(false) }
-        val confirmMessage by remember { mutableStateOf("") }
-        val jsResult by remember { mutableStateOf<JsResult?>(null) } // To hold JsResult reference for confirm/cancel
+        var confirmMessage by remember { mutableStateOf("") }
+        var jsResult by remember { mutableStateOf<JsResult?>(null) } // To hold JsResult reference for confirm/cancel
 
         // For exit confirmation dialog
         var showExitDialog by remember { mutableStateOf(false) }
@@ -177,82 +182,80 @@ class MainActivity : ComponentActivity() {
                     val appVersion = context.packageName
                     settings.userAgentString = "$ua $appVersion Android-WebView"
 
-                    webChromeClient = webChromeClient
-                    webViewClient = webViewClient
 
-//                    webChromeClient = object : WebChromeClient() {
-//
-//
-//                        override fun onJsConfirm(
-//                            view: WebView?, url: String?, message: String?, result: JsResult?
-//                        ): Boolean {
-//                            confirmMessage = message ?: ""
-//                            jsResult = result // Store JsResult to handle confirm/cancel
-//                            showDialog = true
-//                            return true // Return true to indicate that we've handled the confirm dialog
-//                        }
-//
-//                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
-//                            // Update progress bar with loading progress
-//                            if (newProgress == 100) {
-//                                loaderDialogScreen.value = false // Hide loader when done
-//                            } else {
-//                                loaderDialogScreen.value = true // Show loader while loading
-//                            }
-//                        }
-//
-//                    }
-//                    webViewClient = object : WebViewClient() {
-//
-//
-//                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
-//                            return request?.url?.host != "amh.anshumemorial.in"
-//                        }
-//
-//
-//                        //                    except url block loading other url
-////                        override fun shouldOverrideUrlLoading(
-////                            view: WebView?,
-////                            request: WebResourceRequest?
-////                        ): Boolean {
-////                            val webUrl = request?.url.toString()
-////                            if (webUrl.startsWith(url)) {
-////                                return false // Allow URL
-////                            }
-////                            return true // Block other URLs
-////                        }
-//
-//
-//                        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-//                            loaderDialogScreen.value = true
-////                        return super.onPageStarted(view, url, favicon)
-//                        }
-//
-//                        override fun onPageFinished(view: WebView, url: String) {
-//                            loaderDialogScreen.value = false
-//                        }
-//
-//                        override fun onReceivedError(
+                    webChromeClient = object : WebChromeClient() {
+
+
+                        override fun onJsConfirm(
+                            view: WebView?, url: String?, message: String?, result: JsResult?
+                        ): Boolean {
+                            confirmMessage = message ?: ""
+                            jsResult = result // Store JsResult to handle confirm/cancel
+                            showDialog = true
+                            return true // Return true to indicate that we've handled the confirm dialog
+                        }
+
+                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                            // Update progress bar with loading progress
+                            if (newProgress == 100) {
+                                loaderDialogScreen.value = false // Hide loader when done
+                            } else {
+                                loaderDialogScreen.value = true // Show loader while loading
+                            }
+                        }
+
+                    }
+                    webViewClient = object : WebViewClient() {
+
+
+                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                            return request?.url?.host != "amh.anshumemorial.in"
+                        }
+
+
+                        //                    except url block loading other url
+//                        override fun shouldOverrideUrlLoading(
 //                            view: WebView?,
-//                            request: WebResourceRequest?,
-//                            error: WebResourceError?
-//                        ) {
-//                            super.onReceivedError(view, request, error)
-//                            loaderDialogScreen.value = false
-//                            // Display a custom error page instead
-//                            view?.loadUrl("file:///android_asset/error.html")
+//                            request: WebResourceRequest?
+//                        ): Boolean {
+//                            val webUrl = request?.url.toString()
+//                            if (webUrl.startsWith(url)) {
+//                                return false // Allow URL
+//                            }
+//                            return true // Block other URLs
 //                        }
-//
-//
-////                    override fun onReceivedError(
-////                        view: WebView?, request: WebResourceRequest?, error: WebResourceError?
-////                    ) {
-////                        super.onReceivedError(view, request, error)
-////                        loaderDialogScreen.value = false
-////                        // Load local HTML file in case of error
-////                        view?.loadUrl("file:///android_asset/404.html")
-////                    }
+
+
+                        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                            loaderDialogScreen.value = true
+//                        return super.onPageStarted(view, url, favicon)
+                        }
+
+                        override fun onPageFinished(view: WebView, url: String) {
+                            loaderDialogScreen.value = false
+                        }
+
+                        override fun onReceivedError(
+                            view: WebView?,
+                            request: WebResourceRequest?,
+                            error: WebResourceError?
+                        ) {
+                            super.onReceivedError(view, request, error)
+                            loaderDialogScreen.value = false
+                            // Display a custom error page instead
+                            view?.loadUrl("file:///android_asset/error.html")
+                        }
+
+
+//                    override fun onReceivedError(
+//                        view: WebView?, request: WebResourceRequest?, error: WebResourceError?
+//                    ) {
+//                        super.onReceivedError(view, request, error)
+//                        loaderDialogScreen.value = false
+//                        // Load local HTML file in case of error
+//                        view?.loadUrl("file:///android_asset/404.html")
 //                    }
+                    }
                     loadUrl(url)
                     webView = this
 
