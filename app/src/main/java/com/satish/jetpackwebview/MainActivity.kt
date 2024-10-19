@@ -13,6 +13,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -27,6 +28,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -89,6 +92,8 @@ class MainActivity : ComponentActivity() {
 
         // For exit confirmation dialog
         var showExitDialog by remember { mutableStateOf(false) }
+
+        var pressedTime by remember { mutableLongStateOf(0) }
 
         if (showDialog) {
             AlertDialog(onDismissRequest = { showDialog = false },
@@ -208,7 +213,10 @@ class MainActivity : ComponentActivity() {
                     webViewClient = object : WebViewClient() {
 
 
-                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView?,
+                            request: WebResourceRequest?
+                        ): Boolean {
                             return request?.url?.host != "amh.anshumemorial.in"
                         }
 
@@ -272,6 +280,18 @@ class MainActivity : ComponentActivity() {
 
         }
 
+        fun doubleBackToExit() {
+            // on below line we are checking if the press time is greater than 2 sec
+            if (pressedTime + 2000 > System.currentTimeMillis()) {
+                // if time is greater than 2 sec we are closing the application.
+                (webView?.context as? Activity)?.finish() // Exit app
+            } else {
+                // in else condition displaying a toast message.
+                Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
+            }
+            // on below line initializing our press time variable
+            pressedTime = System.currentTimeMillis()
+        }
 
         BackHandler(enabled = true) {
             webView?.let {
@@ -279,7 +299,10 @@ class MainActivity : ComponentActivity() {
                     it.goBack() // Navigate back within the WebView
                 } else {
                     // Show exit confirmation dialog
-                    showExitDialog = true
+//                    showExitDialog = true // uncomment this if want to show exit dialog
+//                    double back to exit
+                    doubleBackToExit() // uncomment this if want to show exit dialog
+
                 }
             }
         }
