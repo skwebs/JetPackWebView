@@ -289,7 +289,7 @@ class MainActivity : ComponentActivity() {
                 (webView?.context as? Activity)?.finish() // Exit app
             } else {
                 // in else condition displaying a toast message.
-                Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show()
             }
             // on below line initializing our press time variable
             pressedTime = System.currentTimeMillis()
